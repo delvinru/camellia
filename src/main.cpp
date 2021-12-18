@@ -54,6 +54,24 @@ std::string parse_filename(char **argv, char **end)
     exit(EXIT_FAILURE);
 }
 
+std::string parse_outputfile(char **argv, char **end)
+{
+    std::string file_1, file_2;
+    if (check_cmd(argv, end, "-o", "--output"))
+    {
+        file_1 = get_cmd(argv, end, "-o");
+        file_2 = get_cmd(argv, end, "--output");
+    }
+
+    if (!file_1.empty())
+        return file_1;
+
+    if (!file_2.empty())
+        return file_2;
+
+    return std::string();
+}
+
 std::vector<uint8_t> generate_key()
 {
     std::srand(std::time(nullptr));
@@ -75,13 +93,37 @@ std::vector<uint8_t> read_data(std::string filename)
     return data;
 }
 
-std::vector<uint8_t> encrypt(std::vector<uint8_t> &data, std::string &key)
+std::vector<uint8_t> encrypt(std::vector<uint8_t> &data, std::vector<uint8_t> &key)
 {
+    uint8_t ekey[272] = {0};
+    uint8_t ukey[key.size()];
+    uint32_t keysize = key.size() * 8;
+
+    std::copy(key.begin(), key.end(), ukey);
+
+    Camellia::ekeygen(ukey, ekey, keysize);
+
+    std::vector<uint8_t> result;
+    for (int i = 0; i < data.size(); i += 16)
+    {
+        uint8_t tmp[16] = {0};
+        uint8_t res[16] = {0};
+        std::copy(data.begin() + i, data.begin() + i + 16, tmp);
+        Camellia::encrypt(tmp, ekey, res, keysize);
+
+        for (int j = 0; j < 16; j++)
+            result.push_back(res[j]);
+    }
+    return result;
 }
 
-void hexdump(uint8_t *data, uint32_t length)
+void hexdump(std::vector<uint8_t> data_vec)
 {
+    uint8_t data[data_vec.size()];
+    std::copy(data_vec.begin(), data_vec.end(), data);
+
     uint32_t width = 0;
+    uint32_t length = data_vec.size();
     for (uint8_t *p = data; length > 0; ++p)
     {
         if (width >= 16)
@@ -93,6 +135,7 @@ void hexdump(uint8_t *data, uint32_t length)
         --length;
         ++width;
     }
+    std::cout << std::endl;
 }
 
 int main(int argc, char **argv)
@@ -107,18 +150,38 @@ int main(int argc, char **argv)
     {
         std::string filename = parse_filename(argv, argv + argc);
         std::vector<uint8_t> data = read_data(filename);
-
         std::vector<uint8_t> key;
 
         if (!check_cmd(argv, argv + argc, "-k", "--key"))
         {
             key = generate_key();
             std::cout << "[+] Use random key" << std::endl;
+            hexdump(key);
+        }
+        else
+        {
+            // TODO: append key to 16, 24, 32 bytes
         }
 
-        uint8_t ukey[key.size()];
-        std::copy(key.begin(), key.end(), ukey);
-        hexdump(ukey, key.size());
+        std::vector<uint8_t> encrypted = encrypt(data, key);
+        std::string output_file;
+        if (check_cmd(argv, argv + argc, "-o", "--output"))
+            output_file = parse_outputfile(argv, argv + argc);
+        else
+            output_file = filename + ".enc";
+
+        std::cout << "[+] Encrypted data saved to: " + output_file << std::endl;
+
+        std::ofstream outfile(output_file, std::ios::out | std::ios::binary);
+        outfile.write((char *)&encrypted[0], encrypted.size());
+    }
+    else if (check_cmd(argv, argv + argc, "-d", "--decrypt"))
+    {
+    }
+    else
+    {
+        std::cout << "[!] Incorrect option" << std::endl;
+        print_usage(argv);
     }
 
     return 0;

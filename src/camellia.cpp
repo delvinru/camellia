@@ -305,19 +305,4 @@ namespace Camellia
         XOR(plaintext, e, plaintext);
     }
 
-    void hexdump(uint8_t *data, uint32_t length)
-    {
-        uint32_t width = 0;
-        for (uint8_t *p = data; length > 0; ++p)
-        {
-            if (width >= 16)
-            {
-                std::cout << std::endl;
-                width = 0;
-            }
-            printf("%02x ", *p);
-            --length;
-            ++width;
-        }
-    }
 }

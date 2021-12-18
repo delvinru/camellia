@@ -172,7 +172,7 @@ namespace Camellia
         case 192:
             for (int i = 0; i < 24; i++)
                 t[i] = k[i];
-            for (int i = 24; 24 < 32; i++)
+            for (int i = 24; i < 32; i++)
                 t[i] = k[i - 8] ^ 0xff;
             break;
         case 256:
@@ -261,6 +261,9 @@ namespace Camellia
                 feistel(ciphertext, e + 208 + (i << 4), ciphertext + 8);
                 feistel(ciphertext + 8, e + 216 + (i << 4), ciphertext);
             }
+
+            SWAP(ciphertext);
+            XOR(ciphertext, e + 256, ciphertext);
         }
     };
 

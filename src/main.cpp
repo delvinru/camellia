@@ -1,37 +1,64 @@
 #include <iostream>
+#include <vector>
+#include <fstream>
+#include <algorithm>
 #include "camellia.hpp"
 
 #define size(arr) sizeof(arr) / sizeof(uint8_t)
 
+std::string get_cmd(char **begin, char **end, const std::string &option)
+{
+    char **itr = std::find(begin, end, option);
+    if (itr != end && ++itr != end)
+        return *itr;
+    return std::string();
+}
+
+bool check_cmd(char **begin, char **end, const std::string &option_1, const std::string &option_2)
+{
+    return std::find(begin, end, option_1) != end || std::find(begin, end, option_2) != end;
+}
+
+void print_usage(char **argv)
+{
+    std::cout << "Usage: " << argv[0] << " [-hv] {-f <file>} [-o <file>]" << std::endl;
+    std::cout << "-f (--file): input filename" << std::endl
+              << "-o (--output): output filename or empty to out in stdout" << std::endl
+              << "-v (--verbose): verbose mode" << std::endl
+              << "-h (--help): show this help page" << std::endl;
+    exit(EXIT_SUCCESS);
+}
+
+std::string parse_filename(char **argv, char **end)
+{
+    std::string file_1, file_2;
+    if (check_cmd(argv, end, "-f", "--file"))
+    {
+        file_1 = get_cmd(argv, end, "-f");
+        file_2 = get_cmd(argv, end, "--file");
+    }
+
+    if (!file_1.empty())
+        return file_1;
+
+    if (!file_2.empty())
+        return file_2;
+
+    std::cout << "[!] Empty filename" << std::endl;
+    exit(EXIT_FAILURE);
+}
+
 int main(int argc, char **argv)
 {
-    std::cout << "[+] Init encryption" << std::endl;
+    if (argc == 1 || check_cmd(argv, argv + argc, "-h", "--help"))
+        print_usage(argv);
 
-    const uint32_t keysize = 128;
-    uint8_t plaintext[16] = {
-        0x41, 0x42, 0x43, 0x44,
-        0x41, 0x42, 0x43, 0x44,
-        0x41, 0x42, 0x43, 0x44,
-        0x41, 0x42, 0x43, 0x44};
-    uint8_t key[32] = {
-        0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,
-        0xfe, 0xdc, 0xba, 0x98, 0x76, 0x54, 0x32, 0x10,
-        0x01, 0x11, 0x22, 0x33, 0x44, 0x55, 0x66, 0x77,
-        0x88, 0x99, 0xaa, 0xbb, 0xcc, 0xdd, 0xee, 0xff};
+    if (!check_cmd(argv, argv + argc, "-f", "--file"))
+        print_usage(argv);
 
-    uint8_t ctext[16] = {0}, rtext[16] = {0}, ekey[272] = {0};
+    std::string filename = parse_filename(argv, argv + argc);
 
-    Camellia::ekeygen(key, ekey, keysize);
+    std::cout << "[+] Parsed filename: " << filename << std::endl;
 
-    Camellia::encrypt(plaintext, ekey, ctext, keysize);
-    std::cout << "[+] Done encryption" << std::endl;
-
-    std::cout << "[+] Encrypted text" << std::endl;
-    Camellia::hexdump(ctext, size(ctext));
-
-    Camellia::decrypt(ctext, ekey, rtext, keysize);
-    std::cout << "[+] Decrypted text" << std::endl;
-
-    Camellia::hexdump(rtext, size(rtext));
     return 0;
 }

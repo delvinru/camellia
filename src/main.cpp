@@ -43,10 +43,9 @@ void hexdump(std::vector<uint8_t> data_vec)
     std::cout << std::endl;
 }
 
-
 void print_usage(char **argv)
 {
-    std::cout << "Usage: " << argv[0] << "[-ed] [-hv] {-f <file>} [-k <key>] [-o <file>]" << std::endl;
+    std::cout << "Usage: " << argv[0] << " [-ed] [-hv] {-f <file>} [-k <key>] [-o <file>]" << std::endl;
     std::cout << "-e (--encrypt): encrypt data" << std::endl
               << "-d (--decrypt): decrypt data" << std::endl
               << "-f (--file): input filename" << std::endl
@@ -134,8 +133,6 @@ std::vector<uint8_t> encrypt(std::vector<uint8_t> &data, std::vector<uint8_t> &k
 
     std::copy(key.begin(), key.end(), ukey);
 
-    hexdump(data);
-
     Camellia::ekeygen(ukey, ekey, keysize);
 
     std::vector<uint8_t> result;
@@ -192,6 +189,30 @@ void save_data(std::vector<uint8_t> data, std::string output_filename)
     outfile.write((char *)&data[0], data.size());
 }
 
+void pad_key(std::vector<uint8_t> *data, uint8_t n)
+{
+    for (int i = (*data).size(); i < n; i++)
+        (*data).push_back(0x07); // Padding value
+}
+
+std::vector<uint8_t> check_key(char **begin, char **end)
+{
+    std::string filename = parse_key(begin, end);
+    std::vector<uint8_t> key_data = read_data(filename);
+    if (key_data.size() <= 16)
+        pad_key(&key_data, 16);
+    else if (key_data.size() > 16 && key_data.size() <= 24)
+        pad_key(&key_data, 24);
+    else if (key_data.size() > 24 && key_data.size() <= 32)
+        pad_key(&key_data, 32);
+    else
+    {
+        std::cout << "[!] Key size should be less or equal 32 bytes" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    return key_data;
+}
+
 int main(int argc, char **argv)
 {
     if (argc == 1 || check_cmd(argv, argv + argc, "-h", "--help"))
@@ -210,13 +231,14 @@ int main(int argc, char **argv)
         {
             key = generate_key();
             std::cout << "[+] Use random key" << std::endl;
-            hexdump(key);
             save_data(key, "key.bin");
         }
         else
         {
-            // TODO: append key to 16, 24, 32 bytes
+            std::cout << "[+] Use user key" << std::endl;
+            key = check_key(argv, argv + argc);
         }
+        hexdump(key);
 
         // Encrypt data
         std::vector<uint8_t> encrypted = encrypt(data, key);
@@ -230,8 +252,7 @@ int main(int argc, char **argv)
     }
     else if (check_cmd(argv, argv + argc, "-d", "--decrypt"))
     {
-        std::string keyfile = parse_key(argv, argv + argc);
-        key = read_data(keyfile);
+        key = check_key(argv, argv + argc);
 
         std::cout << "[+] Read key:" << std::endl;
         hexdump(key);

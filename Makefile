@@ -3,3 +3,6 @@ all:
 
 debug:
 	$(MAKE) debug -C src/
+
+test:
+	$(MAKE) test -C src/

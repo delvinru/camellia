@@ -7,7 +7,7 @@
 
 #include "camellia.hpp"
 
-#define mysize(arr) sizeof(arr) / sizeof(uint8_t)
+#define PADDING_VALUE 0x07
 
 std::string get_cmd(char **begin, char **end, const std::string &option)
 {
@@ -124,6 +124,44 @@ std::vector<uint8_t> generate_key()
     return res;
 }
 
+std::vector<uint8_t> read_data(std::string filename)
+{
+    std::ifstream myfile(filename, std::ios::binary);
+    std::vector<uint8_t> data((std::istreambuf_iterator<char>(myfile)), std::istreambuf_iterator<char>());
+    myfile.close();
+    return data;
+}
+
+void save_data(std::vector<uint8_t> data, std::string output_filename)
+{
+    std::ofstream outfile(output_filename, std::ios::out | std::ios::binary);
+    outfile.write((char *)&data[0], data.size());
+}
+
+void pad_key(std::vector<uint8_t> *key, uint8_t n)
+{
+    for (int i = (*key).size(); i < n; i++)
+        (*key).push_back(PADDING_VALUE);
+}
+
+std::vector<uint8_t> check_key(char **begin, char **end)
+{
+    std::string filename = parse_key(begin, end);
+    std::vector<uint8_t> key_data = read_data(filename);
+    if (key_data.size() <= 16)
+        pad_key(&key_data, 16);
+    else if (key_data.size() > 16 && key_data.size() <= 24)
+        pad_key(&key_data, 24);
+    else if (key_data.size() > 24 && key_data.size() <= 32)
+        pad_key(&key_data, 32);
+    else
+    {
+        std::cout << "[!] Key size should be less or equal 32 bytes" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    return key_data;
+}
+
 std::vector<uint8_t> encrypt(std::vector<uint8_t> &data, std::vector<uint8_t> &key)
 {
     uint8_t ekey[272] = {0};
@@ -146,6 +184,7 @@ std::vector<uint8_t> encrypt(std::vector<uint8_t> &data, std::vector<uint8_t> &k
         for (int j = 0; j < 16; j++)
             result.push_back(res[j]);
     }
+    hexdump(result);
     return result;
 }
 
@@ -173,44 +212,6 @@ std::vector<uint8_t> decrypt(std::vector<uint8_t> &data, std::vector<uint8_t> &k
             result.push_back(res[j]);
     }
     return result;
-}
-
-std::vector<uint8_t> read_data(std::string filename)
-{
-    std::ifstream myfile(filename, std::ios::binary);
-    std::vector<uint8_t> data((std::istreambuf_iterator<char>(myfile)), std::istreambuf_iterator<char>());
-    myfile.close();
-    return data;
-}
-
-void save_data(std::vector<uint8_t> data, std::string output_filename)
-{
-    std::ofstream outfile(output_filename, std::ios::out | std::ios::binary);
-    outfile.write((char *)&data[0], data.size());
-}
-
-void pad_key(std::vector<uint8_t> *data, uint8_t n)
-{
-    for (int i = (*data).size(); i < n; i++)
-        (*data).push_back(0x07); // Padding value
-}
-
-std::vector<uint8_t> check_key(char **begin, char **end)
-{
-    std::string filename = parse_key(begin, end);
-    std::vector<uint8_t> key_data = read_data(filename);
-    if (key_data.size() <= 16)
-        pad_key(&key_data, 16);
-    else if (key_data.size() > 16 && key_data.size() <= 24)
-        pad_key(&key_data, 24);
-    else if (key_data.size() > 24 && key_data.size() <= 32)
-        pad_key(&key_data, 32);
-    else
-    {
-        std::cout << "[!] Key size should be less or equal 32 bytes" << std::endl;
-        exit(EXIT_FAILURE);
-    }
-    return key_data;
 }
 
 int main(int argc, char **argv)

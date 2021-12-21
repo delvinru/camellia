@@ -4,6 +4,13 @@
 
 namespace Camellia
 {
+    // In specification uses this constants
+    // Sigma1 = 0xA09E667F3BCC908B;
+    // Sigma2 = 0xB67AE8584CAA73B2;
+    // Sigma3 = 0xC6EF372FE94F82BE;
+    // Sigma4 = 0x54FF53A5F1D36F1C;
+    // Sigma5 = 0x10E527FADE682D1D;
+    // Sigma6 = 0xB05688C2B3E6C1FD;
     const uint8_t SIGMA[48] = {
         0xa0, 0x9e, 0x66, 0x7f, 0x3b, 0xcc, 0x90, 0x8b,
         0xb6, 0x7a, 0xe8, 0x58, 0x4c, 0xaa, 0x73, 0xb2,
@@ -120,6 +127,7 @@ namespace Camellia
         }
     }
 
+    // F-function in specification
     void feistel(const uint8_t *x, const uint8_t *k, uint8_t *y)
     {
         uint8_t t[8];

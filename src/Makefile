@@ -10,3 +10,8 @@ build:
 
 debug:
 	$(CC) $(DEBUG) $(FILE).cpp $(LIB) -o ../$(BIN)
+
+test:
+	@$(CC) test.cpp $(LIB) -o ../camellia-test
+	@echo "Run test from RFC"
+	@../camellia-test

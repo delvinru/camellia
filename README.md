@@ -1,5 +1,7 @@
 ### Camellia cipher
 
+Based on https://datatracker.ietf.org/doc/html/rfc3713.
+
 #### Build
 
 ```bash
@@ -19,4 +21,3 @@ Usage: ./camellia [-ed] [-hv] {-f <file>} [-k <key>] [-o <file>]
 -v (--verbose): verbose mode
 -h (--help): show this help page
 ```
-

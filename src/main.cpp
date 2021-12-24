@@ -50,7 +50,7 @@ void print_usage(char **argv)
               << "-d (--decrypt): decrypt data" << std::endl
               << "-f (--file): input filename" << std::endl
               << "-k (--key): key file for encryption/decryption" << std::endl
-              << "-o (--output): output filename or empty to out in stdout" << std::endl
+              << "-o (--output): output filename or use default with postfix '.enc'" << std::endl
               << "-v (--verbose): verbose mode" << std::endl
               << "-h (--help): show this help page" << std::endl;
     exit(EXIT_SUCCESS);
@@ -184,7 +184,6 @@ std::vector<uint8_t> encrypt(std::vector<uint8_t> &data, std::vector<uint8_t> &k
         for (int j = 0; j < 16; j++)
             result.push_back(res[j]);
     }
-    hexdump(result);
     return result;
 }
 

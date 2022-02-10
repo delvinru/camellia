@@ -7,7 +7,7 @@
 
 #include "camellia.hpp"
 
-#define PADDING_VALUE 0x07
+#define PADDING_VALUE 0x00
 
 std::string get_cmd(char **begin, char **end, const std::string &option)
 {
@@ -45,13 +45,13 @@ void hexdump(std::vector<uint8_t> data_vec)
 
 void print_usage(char **argv)
 {
-    std::cout << "Usage: " << argv[0] << " [-ed] [-hv] {-f <file>} [-k <key>] [-o <file>]" << std::endl;
+    std::cout << "Usage: " << argv[0] << " [-ed] [-hv] {-f <file>} [-k <key>] [-l <key_length>] [-o <file>]" << std::endl;
     std::cout << "-e (--encrypt): encrypt data" << std::endl
               << "-d (--decrypt): decrypt data" << std::endl
               << "-f (--file): input filename" << std::endl
               << "-k (--key): key file for encryption/decryption" << std::endl
+              << "-l (--key-len): the length of the key to pad" << std::endl
               << "-o (--output): output filename or use default with postfix '.enc'" << std::endl
-              << "-v (--verbose): verbose mode" << std::endl
               << "-h (--help): show this help page" << std::endl;
     exit(EXIT_SUCCESS);
 }
@@ -111,6 +111,23 @@ std::string parse_key(char **argv, char **end)
     exit(EXIT_FAILURE);
 }
 
+int parse_key_length(char **argv, char **end)
+{
+    std::string arg_1, arg_2;
+    if (check_cmd(argv, end, "-l", "--key_len"))
+    {
+        arg_1 = get_cmd(argv, end, "-l");
+        arg_2 = get_cmd(argv, end, "--key-len");
+
+        if (!arg_1.empty())
+            return std::stoi(arg_1);
+
+        if (!arg_2.empty())
+            return std::stoi(arg_2);
+    }
+    return 0;
+}
+
 std::vector<uint8_t> generate_key()
 {
     std::srand(std::time(nullptr));
@@ -159,6 +176,19 @@ std::vector<uint8_t> check_key(char **begin, char **end)
         std::cout << "[!] Key size should be less or equal 32 bytes" << std::endl;
         exit(EXIT_FAILURE);
     }
+    return key_data;
+}
+
+std::vector<uint8_t> check_key(char **begin, char **end, int key_len)
+{
+    std::string filename = parse_key(begin, end);
+    std::vector<uint8_t> key_data = read_data(filename);
+    if (key_len % 8 != 0)
+    {
+        std::cout << "[!] Key length should be 16, 24 or 32 bytes" << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    pad_key(&key_data, key_len);
     return key_data;
 }
 
@@ -236,7 +266,14 @@ int main(int argc, char **argv)
         else
         {
             std::cout << "[+] Use user key" << std::endl;
-            key = check_key(argv, argv + argc);
+            if (check_cmd(argv, argv + argc, "-l", "--key-len"))
+            {
+                int key_length = parse_key_length(argv, argv + argc);
+                std::cout << "[+] Key length: " << key_length << std::endl;
+                key = check_key(argv, argv + argc, key_length);
+            }
+            else
+                key = check_key(argv, argv + argc);
         }
         hexdump(key);
 
@@ -252,7 +289,14 @@ int main(int argc, char **argv)
     }
     else if (check_cmd(argv, argv + argc, "-d", "--decrypt"))
     {
-        key = check_key(argv, argv + argc);
+        if (check_cmd(argv, argv + argc, "-l", "--key-len"))
+        {
+            int key_length = parse_key_length(argv, argv + argc);
+            std::cout << "[+] Key length: " << key_length << std::endl;
+            key = check_key(argv, argv + argc, key_length);
+        }
+        else
+            key = check_key(argv, argv + argc);
 
         std::cout << "[+] Read key:" << std::endl;
         hexdump(key);
